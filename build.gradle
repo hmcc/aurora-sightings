@@ -11,10 +11,11 @@ buildscript {
 
 apply plugin: 'java'
 apply plugin: 'eclipse'
+apply plugin: 'idea'
 apply plugin: 'spring-boot'
-apply plugin: 'war'
 
-war {
+
+jar {
     baseName = 'aurora-sightings'
     version =  '0.0.1'
 }
@@ -25,16 +26,11 @@ repositories {
     maven { url "https://repo.spring.io/libs-release" }
 }
 
-configurations {
-    providedRuntime
-}
-
 dependencies {
-    compile("org.springframework.boot:spring-boot-starter-web")
-    providedRuntime("org.springframework.boot:spring-boot-starter-tomcat")
+    compile("org.springframework.boot:spring-boot-starter")
     testCompile("junit:junit")
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '1.11'
+    gradleVersion = '1.2.1'
 }
