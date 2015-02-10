@@ -13,11 +13,16 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'spring-boot'
+apply plugin: 'war'
 
 
-jar {
+war {
     baseName = 'aurora-sightings'
-    version =  '0.0.1'
+    version =  '0.0.2'
+}
+
+configurations {
+    providedRuntime
 }
 
 repositories {
@@ -27,7 +32,9 @@ repositories {
 }
 
 dependencies {
-    compile("org.springframework.boot:spring-boot-starter")
+    compile("org.springframework.boot:spring-boot-starter-web")
+    providedRuntime("org.springframework.boot:spring-boot-starter-tomcat")
+    compile("org.springframework.social:spring-social-twitter")
     testCompile("junit:junit")
 }
 
