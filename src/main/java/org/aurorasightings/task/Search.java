@@ -5,7 +5,7 @@ import java.util.Date;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.aurorasightings.twitter.Stream;
+import org.aurorasightings.twitter.SearchStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.social.twitter.api.Tweet;
@@ -18,7 +18,7 @@ public class Search {
 	private static final Log log = LogFactory.getLog(Search.class);
 	
 	@Autowired
-	private Stream stream;
+	private SearchStream stream;
     
     @Scheduled(fixedRate = 60000)
     public void reportCurrentTime() {

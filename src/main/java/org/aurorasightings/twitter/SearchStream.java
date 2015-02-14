@@ -5,7 +5,7 @@ import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.aurorasightings.config.TwitterProperties;
+import org.aurorasightings.config.TwitterSearchProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.social.RateLimitExceededException;
@@ -17,33 +17,34 @@ import org.springframework.social.twitter.api.Twitter;
 import org.springframework.stereotype.Service;
 
 @Service
-@EnableConfigurationProperties(TwitterProperties.class)
-public class Stream implements Iterator<Tweet> {
+@EnableConfigurationProperties(TwitterSearchProperties.class)
+public class SearchStream implements Iterator<Tweet> {
 	
-	private static final Log log = LogFactory.getLog(Stream.class);
-	
-	private SearchParameters params;
+	private static final Log log = LogFactory.getLog(SearchStream.class);
 	
 	@Autowired
 	private Twitter twitter;
 	
 	@Autowired
-	private TwitterProperties props;
+	private TwitterSearchProperties props;
 	
-	
-	private SearchResults results;
+	private SearchParameters params;
 	private Iterator<Tweet> tweetIterator;
+	private Tweet nextResult;
 	private long minIdSeen = Long.MAX_VALUE;
 	
-	public Stream() {
-		params = new SearchParameters("aurora OR \"northern lights\"");
-		params.resultType(ResultType.RECENT);
-		params.sinceId(0);
-		params.maxId(Long.MAX_VALUE);
+	private void initParams() {
+		if (params == null) {
+			params = new SearchParameters(props.getSearchTerm());
+			params.resultType(ResultType.RECENT);
+			params.sinceId(0);
+			params.maxId(Long.MAX_VALUE);
+		}
 	}
 	
 	private void loadMore() {
 		// Set the max ID to one less than the lowest ID seen so far
+		initParams();
 		if (minIdSeen - 1 < params.getMaxId()) {
 			params.maxId(minIdSeen - 1);
 		}
@@ -55,11 +56,15 @@ public class Stream implements Iterator<Tweet> {
 		}
 		
 		// Try to make the Twitter API call. If the rate limit is exceeded,
-		// try a sleep then retry, up to 5 tries in total.
+		// try a sleep then retry.
 		int sleepMillis = props.getRateLimitWait() * 1000;
-		for (int i = 0; i < 5; i++) {
+		int tries = props.getRateLimitRetries() + 1;
+		for (int i = 0; i < tries; i++) {
 			try {
-				results = twitter.searchOperations().search(params);
+				SearchResults results = twitter.searchOperations().search(params);
+				if (results == null || results.getTweets() == null) {
+					return;
+				}
 				tweetIterator = results.getTweets().iterator();
 				return;
 			} catch (RateLimitExceededException e) {
@@ -78,30 +83,64 @@ public class Stream implements Iterator<Tweet> {
 			minIdSeen = tweet.getId();
 		}
 	}
+	
+	// protected methods for unit testing
+	protected void setTwitter(Twitter twitter) {
+		this.twitter = twitter;
+	}
+	
+	protected void setProps(TwitterSearchProperties props) {
+		this.props = props;
+	}
+	
+	protected TwitterSearchProperties getProps() {
+		return props;
+	}
 
+	/**
+	 * Allows the caller to limit the results to Tweets with IDs greater than
+	 * or equal to that specified.
+	 * 
+	 * @param sinceId - lowest ID that will be returned
+	 */
 	public void configureSinceId(long sinceId) {
+		initParams();
 		params.sinceId(sinceId);
 	}
 	
+	// Iterator methods
 	@Override
 	public boolean hasNext() {
-		if (tweetIterator == null || !tweetIterator.hasNext()) {
-			loadMore();
+
+		while  (nextResult == null) {
+			// Is the iterator uninitialised or exhausted? If so, try loading more results.
+			if (tweetIterator == null || !tweetIterator.hasNext()) {
+				loadMore();
+			}
+			// If there are no more results, we're done
+			if (tweetIterator == null || !tweetIterator.hasNext()) {
+				return false;
+			}
+			
+			nextResult = tweetIterator.next();
+			updateMinIdSeen(nextResult);
+			
+			// If this result is a retweet and we're excluding those, move on
+			if (!props.isIncludeRetweets() && nextResult.isRetweet()) {
+				nextResult = null;
+			}
 		}
-		return tweetIterator != null && tweetIterator.hasNext();
+		return true;
 	}
 
 	@Override
 	public Tweet next() {
-		if (tweetIterator == null || !tweetIterator.hasNext()) {
-			loadMore();
-		}
-		if (tweetIterator == null || !tweetIterator.hasNext()) {
+		if (nextResult == null) {
 			throw new NoSuchElementException();
 		}
-		Tweet tweet = tweetIterator.next();
-		updateMinIdSeen(tweet);
-		return tweet;
+		Tweet resultToReturn = nextResult;
+		nextResult = null;
+		return resultToReturn;
 	}
 
 	@Override
