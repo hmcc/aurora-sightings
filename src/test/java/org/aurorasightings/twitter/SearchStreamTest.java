@@ -23,7 +23,7 @@ import org.springframework.social.twitter.api.Tweet;
 import org.springframework.social.twitter.api.Twitter;
 
 /**
- * Tests for @link SearchStream.
+ * Tests for {@link SearchStream}.
  *
  */
 public class SearchStreamTest {
