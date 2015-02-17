@@ -1,10 +1,9 @@
 package org.aurorasightings.config;
 
-import org.springframework.boot.autoconfigure.social.TwitterProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("spring.social.twitter.search")
-public class TwitterSearchProperties extends TwitterProperties {
+public class TwitterSearchProperties {
 	
 	/**
 	 * Whether to include retweets in the search results

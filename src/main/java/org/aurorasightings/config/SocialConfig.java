@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 public class SocialConfig extends SocialConfigurerAdapter {
 	
 	@Autowired
-	private TwitterSearchProperties props;
+	private TwitterProperties props;
 	
 	@Bean
 	public Twitter twitter() {

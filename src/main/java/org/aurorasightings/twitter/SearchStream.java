@@ -1,7 +1,10 @@
 package org.aurorasightings.twitter;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -23,22 +26,35 @@ public class SearchStream implements Iterator<Tweet> {
 	private static final Log log = LogFactory.getLog(SearchStream.class);
 	
 	@Autowired
+	private QueryParser parser;
+	
+	@Autowired
 	private Twitter twitter;
 	
 	@Autowired
 	private TwitterSearchProperties props;
 	
+	
 	private SearchParameters params;
 	private Iterator<Tweet> tweetIterator;
 	private Tweet nextResult;
 	private long minIdSeen = Long.MAX_VALUE;
+	private List<Pattern> searchRegexes;
 	
 	private void initParams() {
 		if (params == null) {
 			params = new SearchParameters(props.getSearchTerm());
 			params.resultType(ResultType.RECENT);
+			params.lang("en");
 			params.sinceId(0);
 			params.maxId(Long.MAX_VALUE);
+		}
+		if (searchRegexes == null) {
+			searchRegexes = new ArrayList<>();
+			List<String> searchTerms = parser.getArgs(props.getSearchTerm());
+			for (String term : searchTerms) {
+				searchRegexes.add(Pattern.compile("\\b" + term + "\\b", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE));
+			}
 		}
 	}
 	
@@ -85,6 +101,10 @@ public class SearchStream implements Iterator<Tweet> {
 	}
 	
 	// protected methods for unit testing
+	protected void setParser(QueryParser parser) {
+		this.parser = parser;
+	}
+	
 	protected void setTwitter(Twitter twitter) {
 		this.twitter = twitter;
 	}
@@ -128,6 +148,21 @@ public class SearchStream implements Iterator<Tweet> {
 			// If this result is a retweet and we're excluding those, move on
 			if (!props.isIncludeRetweets() && nextResult.isRetweet()) {
 				nextResult = null;
+				
+			// If the result doesn't actually contain the search text (Twitter
+			// also returns results matching on e.g. username), move on
+			} else {
+				boolean found = false;
+				for (Pattern regex : searchRegexes) {
+					
+					if (regex.matcher(nextResult.getText()).find()) {
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					nextResult = null;
+				}
 			}
 		}
 		return true;
