@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.social.twitter.api.Entities;
 import org.springframework.social.twitter.api.MediaEntity;
@@ -33,6 +34,7 @@ public class Tweet {
 	private String id;
 
 	@Field(value = "tweet_id")
+	@Indexed(unique=true)
 	private long tweetID;
 
 	@Field(value = "created_at")
