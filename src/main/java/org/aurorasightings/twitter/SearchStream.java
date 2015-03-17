@@ -68,6 +68,7 @@ public class SearchStream implements Iterator<Tweet> {
 		
 		// If that makes the max ID lower than tweets we loaded previously,
 		// we're all done
+		log.debug("loadMore(): MaxId " + params.getMaxId() + ", sinceId " + params.getSinceId());
 		if (params.getMaxId() < params.getSinceId()) {
 			log.info("MaxId " + params.getMaxId() + " is less than sinceId " + params.getSinceId() + ": all done");
 			return;
@@ -153,7 +154,6 @@ public class SearchStream implements Iterator<Tweet> {
 		while  (nextResult == null) {
 			// Is the iterator uninitialised or exhausted? If so, try loading more results.
 			if (tweetIterator == null || !tweetIterator.hasNext()) {
-				log.debug("hasNext(): tweetIterator " + tweetIterator + " is uninitialised or exhausted, loading more...");
 				loadMore();
 			}
 			// If there are no more results, we're done
