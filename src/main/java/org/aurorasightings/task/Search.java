@@ -24,7 +24,7 @@ public class Search {
     public void searchTweets() {
     	long maxTweetID = repository.getMaxTweetID();
     	log.info("maxTweetID " + maxTweetID);
-    	stream.configureSinceId(maxTweetID);
+    	stream.reset().configureSinceId(maxTweetID);
     	while (stream.hasNext()) {
     		Tweet tweet = Tweet.getInstance(stream.next());
     		

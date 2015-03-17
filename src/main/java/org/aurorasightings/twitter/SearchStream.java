@@ -59,7 +59,8 @@ public class SearchStream implements Iterator<Tweet> {
 	}
 	
 	private void loadMore() {
-		// Set the max ID to one less than the lowest ID seen so far
+		// Set the max ID we want to one less than the lowest ID seen so far
+		// (results are returned sorted by ID descending)
 		initParams();
 		if (minIdSeen - 1 < params.getMaxId()) {
 			params.maxId(minIdSeen - 1);
@@ -68,6 +69,7 @@ public class SearchStream implements Iterator<Tweet> {
 		// If that makes the max ID lower than tweets we loaded previously,
 		// we're all done
 		if (params.getMaxId() < params.getSinceId()) {
+			log.info("MaxId " + params.getMaxId() + " is less than sinceId " + params.getSinceId() + ": all done");
 			return;
 		}
 		
@@ -79,6 +81,7 @@ public class SearchStream implements Iterator<Tweet> {
 			try {
 				SearchResults results = twitter.searchOperations().search(params);
 				if (results == null || results.getTweets() == null) {
+					log.info("Null SearchResults or SearchResults with null tweets: all done");
 					return;
 				}
 				tweetIterator = results.getTweets().iterator();
@@ -116,16 +119,31 @@ public class SearchStream implements Iterator<Tweet> {
 	protected TwitterSearchProperties getProps() {
 		return props;
 	}
+	
+	/**
+	 * Reset the {@link SearchStream} to its newly initialised state
+	 * @return {@link SearchStream}
+	 */
+	public SearchStream reset() {
+		initParams();
+		minIdSeen = Long.MAX_VALUE;
+		log.debug("SearchStream reset");
+		return this;
+	}
 
 	/**
 	 * Allows the caller to limit the results to Tweets with IDs greater than
 	 * or equal to that specified.
 	 * 
 	 * @param sinceId - lowest ID that will be returned
+	 * 
+	 * @return {@link SearchStream}
 	 */
-	public void configureSinceId(long sinceId) {
+	public SearchStream configureSinceId(long sinceId) {
 		initParams();
 		params.sinceId(sinceId);
+		log.debug("SearchStream configured with sinceId " + sinceId);
+		return this;
 	}
 	
 	// Iterator methods
@@ -135,10 +153,12 @@ public class SearchStream implements Iterator<Tweet> {
 		while  (nextResult == null) {
 			// Is the iterator uninitialised or exhausted? If so, try loading more results.
 			if (tweetIterator == null || !tweetIterator.hasNext()) {
+				log.debug("hasNext(): tweetIterator " + tweetIterator + " is uninitialised or exhausted, loading more...");
 				loadMore();
 			}
 			// If there are no more results, we're done
 			if (tweetIterator == null || !tweetIterator.hasNext()) {
+				log.debug("hasNext(): tried loading more but tweetIterator " + tweetIterator + " is still uninitialised or exhausted, giving up.");
 				return false;
 			}
 			
